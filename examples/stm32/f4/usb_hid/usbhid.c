@@ -225,8 +225,7 @@ static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 	(void)req;
 	(void)dev;
 
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO10);
+	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO10);
 	gpio_set(GPIOA, GPIO10);
 	scb_reset_core();
 }
@@ -288,8 +287,7 @@ int main(void)
 	 * The magic delay is somewhat arbitrary, no guarantees on USBIF
 	 * compliance here, but "it works" in most places.
 	 */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
+	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
 	gpio_clear(GPIOA, GPIO12);
 	for (unsigned i = 0; i < 800000; i++) {
 		__asm__("nop");
