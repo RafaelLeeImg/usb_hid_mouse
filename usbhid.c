@@ -275,7 +275,7 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
 
 int main(void)
 {
-	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
+	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_96MHZ]);
 
 	rcc_periph_clock_enable(RCC_GPIOA);
 	/*
