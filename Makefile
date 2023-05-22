@@ -19,5 +19,7 @@
 
 BINARY = usbhid
 
+DEVICE=STM32F411CE
+
 include ../../Makefile.include
 
