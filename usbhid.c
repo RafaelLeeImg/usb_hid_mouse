@@ -24,6 +24,7 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/hid.h>
+#include <libopencm3/stm32/flash.h> // rcc_hse_24mhz_3v3
 
 /* Define this to include the DFU APP interface. */
 #define INCLUDE_DFU_INTERFACE
@@ -34,6 +35,77 @@
 #endif
 
 static usbd_device *usbd_dev;
+
+// rcc.c
+const struct rcc_clock_scale rcc_hse_24mhz_3v3[RCC_CLOCK_3V3_END] = {
+	{ /* 84MHz */
+		.pllm = 12,
+		.plln = 168,
+		.pllp = 4,
+		.pllq = 7,
+		.pllr = 0,
+		.pll_source = RCC_CFGR_PLLSRC_HSE_CLK,
+		.hpre = RCC_CFGR_HPRE_NODIV,
+		.ppre1 = RCC_CFGR_PPRE_DIV2,
+		.ppre2 = RCC_CFGR_PPRE_NODIV,
+		.voltage_scale = PWR_SCALE1,
+		.flash_config = FLASH_ACR_DCEN | FLASH_ACR_ICEN |
+				FLASH_ACR_LATENCY_2WS,
+		.ahb_frequency  = 84000000,
+		.apb1_frequency = 42000000,
+		.apb2_frequency = 84000000,
+	},
+	{ /* 96MHz */
+		.pllm = 6,
+		.plln = 48,
+		.pllp = 2,
+		.pllq = 4,
+		.pllr = 0,
+		.pll_source = RCC_CFGR_PLLSRC_HSE_CLK,
+		.hpre = RCC_CFGR_HPRE_DIV_NONE,
+		.ppre1 = RCC_CFGR_PPRE_DIV_2,
+		.ppre2 = RCC_CFGR_PPRE_DIV_NONE,
+		.voltage_scale = PWR_SCALE1,
+		.flash_config = FLASH_ACR_DCEN | FLASH_ACR_ICEN | FLASH_ACR_LATENCY_3WS,
+		.ahb_frequency  = 96000000,
+		.apb1_frequency = 48000000,
+		.apb2_frequency = 96000000
+	},
+	{ /* 168MHz */
+		.pllm = 12,
+		.plln = 168,
+		.pllp = 2,
+		.pllq = 7,
+		.pllr = 0,
+		.pll_source = RCC_CFGR_PLLSRC_HSE_CLK,
+		.hpre = RCC_CFGR_HPRE_NODIV,
+		.ppre1 = RCC_CFGR_PPRE_DIV4,
+		.ppre2 = RCC_CFGR_PPRE_DIV2,
+		.voltage_scale = PWR_SCALE1,
+		.flash_config = FLASH_ACR_DCEN | FLASH_ACR_ICEN |
+				FLASH_ACR_LATENCY_5WS,
+		.ahb_frequency  = 168000000,
+		.apb1_frequency = 42000000,
+		.apb2_frequency = 84000000,
+	},
+	{ /* 180MHz */
+		.pllm = 12,
+		.plln = 180,
+		.pllp = 2,
+		.pllq = 8,
+		.pllr = 0,
+		.pll_source = RCC_CFGR_PLLSRC_HSE_CLK,
+		.hpre = RCC_CFGR_HPRE_NODIV,
+		.ppre1 = RCC_CFGR_PPRE_DIV4,
+		.ppre2 = RCC_CFGR_PPRE_DIV2,
+		.voltage_scale = PWR_SCALE1,
+		.flash_config = FLASH_ACR_DCEN | FLASH_ACR_ICEN |
+				FLASH_ACR_LATENCY_5WS,
+		.ahb_frequency  = 180000000,
+		.apb1_frequency = 45000000,
+		.apb2_frequency = 90000000,
+	},
+};
 
 const struct usb_device_descriptor dev_descr = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -196,9 +268,9 @@ const struct usb_config_descriptor config = {
 };
 
 static const char *usb_strings[] = {
-	"Black Sphere Technologies",
-	"HID Demo",
-	"DEMO",
+	"SZDIY community",
+	"Mouse Sleep Demo",
+	"CAFE",
 };
 
 /* Buffer to be used for control requests. */
@@ -278,9 +350,18 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
 
 int main(void)
 {
-	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_96MHZ]);
+	// save this file here: libopencm3-examples/examples/stm32/f4/other/usb_hid/usbhid.c
+	// Document, connect PB5 to the IO, if PB5 changed, this device will send packet to move the mouse a little to prevent PC to sleep
+	// variables: static const int reload = 99; // 99:1s, 999:10s
+	// variables: 2nd number of buf_plus and buf_minus is the distance which the mouse moves horizontally
+	rcc_clock_setup_pll(&rcc_hse_24mhz_3v3[RCC_CLOCK_3V3_96MHZ]);
 
 	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_OTGFS);
+
+	gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO5); // PB5 pull-up
+
 	/*
 	 * This is a somewhat common cheap hack to trigger device re-enumeration
 	 * on startup.  Assuming a fixed external pullup on D+, (For USB-FS)
@@ -291,12 +372,19 @@ int main(void)
 	 * compliance here, but "it works" in most places.
 	 */
 	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO12);
+	gpio_set(GPIOA, GPIO12);
+	for (unsigned i = 0; i < 1066667; i++) {
+		__asm__("nop");
+	}
 	gpio_clear(GPIOA, GPIO12);
-	for (unsigned i = 0; i < 800000; i++) {
+	for (unsigned i = 0; i < 1066667; i++) {
 		__asm__("nop");
 	}
 
-	usbd_dev = usbd_init(&otghs_usb_driver, &dev_descr, &config,
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO11 | GPIO12);
+
+	usbd_dev = usbd_init(&otgfs_usb_driver, &dev_descr, &config,
 		usb_strings, 3,
 		usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, hid_set_config);
@@ -307,16 +395,47 @@ int main(void)
 
 void sys_tick_handler(void)
 {
-	static int x = 0;
-	static int dir = 1;
-	uint8_t buf[4] = {0, 0, 0, 0};
-
-	buf[1] = dir;
-	x += dir;
-	if (x > 30)
-		dir = -dir;
-	if (x < -30)
-		dir = -dir;
-
-	usbd_ep_write_packet(usbd_dev, 0x81, buf, 4);
+	static int state=0;
+	static const int reload = 99; // 99:1s, 999:10s
+	static int fade_out = reload;
+	uint8_t buf_plus[4] = {0, 5, 0, 0}; // 
+	uint8_t buf_minus[4] = {0, -5, 0, 0}; // 
+	if (state == 0) {
+		if (fade_out > 0) {
+			fade_out--;
+			return;
+		}
+		else {
+			state = 1;
+			fade_out = 0;
+		}
+		return;
+	}
+	else if (state == 1) { // check if IO changed, if changed, write packet and change state
+		int new = gpio_get(GPIOB, GPIO5); // get PB5
+		static int last = 0;
+		if (last != new) { // IO changed
+			state = 2;
+			usbd_ep_write_packet(usbd_dev, 0x81, buf_plus, 4);
+			last = new;
+			fade_out = 10;
+		}
+		return;
+	}
+	else if (state == 2) { // write 2nd packet
+		if (fade_out > 0) {
+			fade_out--;
+			return;
+		}
+		else {
+			state = 0;
+			fade_out = reload;
+			usbd_ep_write_packet(usbd_dev, 0x81, buf_minus, 4);
+			return;
+		}
+	}
+	else {
+		state = 0;
+		return;
+	}
 }
