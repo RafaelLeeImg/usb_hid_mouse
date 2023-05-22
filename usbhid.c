@@ -269,7 +269,7 @@ const struct usb_config_descriptor config = {
 
 static const char *usb_strings[] = {
 	"SZDIY community",
-	"Mouse Sleep Demo",
+	"Mouse Move to Prevent Sleep",
 	"CAFE",
 };
 
@@ -350,7 +350,9 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
 
 int main(void)
 {
-	// save this file here: libopencm3-examples/examples/stm32/f4/other/usb_hid/usbhid.c
+	// git clone https://github.com/libopencm3/libopencm3-examples
+	// put this folder here: libopencm3-examples/examples/stm32/f4/other/usb_hid
+	// this file shall be libopencm3-examples/examples/stm32/f4/other/usb_hid/usbhid.c
 	// Document, connect PB5 to the IO, if PB5 changed, this device will send packet to move the mouse a little to prevent PC to sleep
 	// variables: static const int reload = 99; // 99:1s, 999:10s
 	// variables: 2nd number of buf_plus and buf_minus is the distance which the mouse moves horizontally
