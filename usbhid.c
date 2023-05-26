@@ -343,10 +343,15 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	/* SysTick interrupt every N clock pulses: set reload to N-1 */
-	systick_set_reload(99999);
+	systick_set_reload(120000-1); // 10ms
 	systick_interrupt_enable();
 	systick_counter_enable();
 }
+
+#define USER_IO_PORT GPIOA // GPIOB
+#define USER_IO_PIN GPIO1 // GPIO5
+// PA1 Alonzo board user button
+// PB5 Alonzo board PIN in extension header
 
 int main(void)
 {
@@ -362,7 +367,7 @@ int main(void)
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_OTGFS);
 
-	gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO5); // PB5 pull-up
+	gpio_mode_setup(USER_IO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, USER_IO_PIN);
 
 	/*
 	 * This is a somewhat common cheap hack to trigger device re-enumeration
@@ -398,23 +403,23 @@ int main(void)
 void sys_tick_handler(void)
 {
 	static int state=0;
-	static const int reload = 99; // 99:1s, 999:10s
+	static const int reload = 499; // 99:1s, 499:5s, 999:10s
 	static int fade_out = reload;
-	uint8_t buf_plus[4] = {0, 5, 0, 0}; // 
-	uint8_t buf_minus[4] = {0, -5, 0, 0}; // 
+	static const uint8_t buf_plus[4] = {0, 5, 0, 0}; // right 5px
+	static const uint8_t buf_minus[4] = {0, -5, 0, 0}; // left 5px
 	if (state == 0) {
 		if (fade_out > 0) {
 			fade_out--;
 			return;
 		}
-		else {
+		else { // fade_out <= 0
 			state = 1;
 			fade_out = 0;
 		}
 		return;
 	}
 	else if (state == 1) { // check if IO changed, if changed, write packet and change state
-		int new = gpio_get(GPIOB, GPIO5); // get PB5
+		int new = gpio_get(USER_IO_PORT, USER_IO_PIN);
 		static int last = 0;
 		if (last != new) { // IO changed
 			state = 2;
