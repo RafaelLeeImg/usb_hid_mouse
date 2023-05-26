@@ -348,8 +348,8 @@ static void hid_set_config(usbd_device *dev, uint16_t wValue)
 	systick_counter_enable();
 }
 
-#define USER_IO_PORT GPIOA // GPIOB
-#define USER_IO_PIN GPIO1 // GPIO5
+#define USER_IO_PORT GPIOB // GPIOA
+#define USER_IO_PIN GPIO5 // GPIO1
 // PA1 Alonzo board user button
 // PB5 Alonzo board PIN in extension header
 
