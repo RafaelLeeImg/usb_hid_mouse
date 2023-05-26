@@ -403,7 +403,7 @@ int main(void)
 void sys_tick_handler(void)
 {
 	static int state=0;
-	static const int reload = 499; // 99:1s, 499:5s, 999:10s
+	static const int reload = 4990; // 90:1s, 490:5s, 990:10s, 4990: 50s
 	static int fade_out = reload;
 	static const uint8_t buf_plus[4] = {0, 5, 0, 0}; // right 5px
 	static const uint8_t buf_minus[4] = {0, -5, 0, 0}; // left 5px
@@ -425,7 +425,7 @@ void sys_tick_handler(void)
 			state = 2;
 			usbd_ep_write_packet(usbd_dev, 0x81, buf_plus, 4);
 			last = new;
-			fade_out = 10;
+			fade_out = 9;
 		}
 		return;
 	}
